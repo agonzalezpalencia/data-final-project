@@ -1,0 +1,13 @@
+# Dependencias Python que necesitan los workers de Airflow para entrenar y
+# registrar modelos en MLflow (proyecto sanitario, dos temáticas).
+# Misma versión de mlflow-skinny que el servidor (MLFlow_Server) y el
+# client-requirements.txt, para evitar incompatibilidades de API.
+mlflow-skinny==3.0.0
+scikit-learn
+pandas
+tensorflow
+cloudpickle
+
+# Carga de datasets abiertos usados en el proyecto
+ucimlrepo
+wfdb

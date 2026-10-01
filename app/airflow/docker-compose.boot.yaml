@@ -1,0 +1,32 @@
+# Override de arranque: quita los topes de CPU/memoria para que el arranque
+# (migraciones, carga de DAGs, primer parseo) no compita por recursos.
+# Se usa junto al compose principal y los limites reales se aplican despues
+# en caliente con scripts/up-elastico.ps1.
+services:
+  airflow-init:
+    cpus: 0
+    mem_limit: 0
+  airflow-webserver:
+    cpus: 0
+    mem_limit: 0
+  airflow-scheduler:
+    cpus: 0
+    mem_limit: 0
+  airflow-worker-cpu-1:
+    cpus: 0
+    mem_limit: 0
+  airflow-worker-cpu-2:
+    cpus: 0
+    mem_limit: 0
+  airflow-worker-low-tier-1:
+    cpus: 0
+    mem_limit: 0
+  airflow-worker-low-tier-2:
+    cpus: 0
+    mem_limit: 0
+  airflow-worker-gpu:
+    cpus: 0
+    mem_limit: 0
+  flower:
+    cpus: 0
+    mem_limit: 0

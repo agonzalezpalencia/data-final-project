@@ -1,0 +1,225 @@
+x-airflow-common:
+  &airflow-common
+  image: ${AIRFLOW_IMAGE_NAME:-airflow-mlops:2.11.2}
+  build: .
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    # Presupuesto prudente para Docker Desktop/Windows (12 vCPU / 16 GB RAM):
+    # no saturar el host con demasiados workers ni demasiadas tareas concurrentes.
+    AIRFLOW__CORE__PARALLELISM: '6'
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: '3'
+    AIRFLOW__SCHEDULER__MAX_TIS_PER_QUERY: '6'
+    AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: '60'
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '30'
+    AIRFLOW__CELERY__WORKER_CONCURRENCY: '2'
+    AIRFLOW__CELERY__WORKER_PREFETCH_MULTIPLIER: '1'
+    # El default (1s) es insuficiente con CPU limitada: corta el import perezoso
+    # de kombu.transport.redis y deja el modulo 'redis' a medias en sys.modules
+    # (AttributeError: module 'redis' has no attribute 'client').
+    AIRFLOW__CELERY__OPERATION_TIMEOUT: '30'
+    AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+    AIRFLOW__WEBSERVER__WORKERS: '1'
+    AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: '300'
+    # Las dependencias de ML van horneadas en la imagen (ver Dockerfile). Dejar
+    # esto vacio evita reinstalar mlflow/tensorflow en cada arranque.
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
+    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    # Datasets del proyecto sanitario: montado de solo lectura, mismo patron
+    # que dags/. Los DAGs leen de aqui con pandas/wfdb, no hay subida por
+    # el webserver.
+    - ${AIRFLOW_PROJ_DIR:-.}/datos:/opt/airflow/datos
+  user: "${AIRFLOW_UID:-50000}:0"
+  cpus: 0.50
+  mem_limit: 512m
+  mem_reservation: 128m
+  networks:
+    - default
+    - mlflow-net
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: public.ecr.aws/docker/library/postgres:15-alpine
+    cpus: 1.00
+    mem_limit: 512m
+    mem_reservation: 256m
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  redis:
+    image: public.ecr.aws/docker/library/redis:7.4
+    cpus: 0.50
+    mem_limit: 192m
+    mem_reservation: 64m
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate && \
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME:-admin}" \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD:-admin}" \
+          --firstname STEMDO \
+          --lastname Bootcamp \
+          --role Admin \
+          --email admin@stemdo.local || true
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    cpus: 1.50
+    mem_limit: 2048m
+    mem_reservation: 1024m
+    ports:
+      - 8080:8080
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    cpus: 2.00
+    mem_limit: 2048m
+    mem_reservation: 512m
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ===== WORKERS (Paralelización con potencia simulada distinta) =====
+  # cpu: 2 nodos generalistas idénticos, escuchando la misma cola, para
+  # simular escalado horizontal real (varios nodos compitiendo por tareas)
+  airflow-worker-cpu-1:
+    <<: *airflow-common
+    command: celery worker --queues=default,cpu_tasks --concurrency=4
+    cpus: 1.50
+    mem_limit: 1024m
+    mem_reservation: 384m
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-worker-cpu-2:
+    <<: *airflow-common
+    command: celery worker --queues=default,cpu_tasks --concurrency=4
+    cpus: 1.50
+    mem_limit: 1024m
+    mem_reservation: 384m
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # low-tier: 2 nodos deliberadamente débiles, misma cola, para tareas
+  # ligeras/monitorización de baja prioridad (poca CPU, poca memoria,
+  # concurrencia mínima por nodo)
+  airflow-worker-low-tier-1:
+    <<: *airflow-common
+    command: celery worker --queues=low_tier_tasks --concurrency=1
+    cpus: 0.50
+    mem_limit: 512m
+    mem_reservation: 128m
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-worker-low-tier-2:
+    <<: *airflow-common
+    command: celery worker --queues=low_tier_tasks --concurrency=1
+    cpus: 0.50
+    mem_limit: 512m
+    mem_reservation: 128m
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # gpu: un único nodo potente pero serializado (simula un acelerador
+  # escaso y compartido: no tiene sentido "duplicarlo" como los otros)
+  airflow-worker-gpu:
+    <<: *airflow-common
+    command: celery worker --queues=gpu_tasks --concurrency=1
+    cpus: 1.50
+    mem_limit: 1024m
+    mem_reservation: 384m
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ===== MONITOREO =====
+  # Flower desde la propia imagen de Airflow: asi comparte la app Celery del
+  # proyecto y muestra colas, workers y tareas con sus nombres reales.
+  flower:
+    <<: *airflow-common
+    command: celery flower
+    cpus: 0.50
+    mem_limit: 512m
+    mem_reservation: 128m
+    ports:
+      - 5555:5555
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+
+networks:
+  mlflow-net:
+    external: true
+    name: mlflow-net

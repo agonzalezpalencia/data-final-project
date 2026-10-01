@@ -1,0 +1,5 @@
+mlflow-skinny==3.0.0
+scikit-learn
+cloudpickle
+# Necesario solo si usas serialization_format=mlflow.sklearn.SERIALIZATION_FORMAT_SKOPS
+skops

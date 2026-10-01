@@ -1,0 +1,40 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.0.0
+    container_name: mlflow-server
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --workers 1
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --serve-artifacts
+      --artifacts-destination /mlflow/artifacts
+      --default-artifact-root mlflow-artifacts:/
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    networks:
+      - mlflow-net
+    restart: unless-stopped
+    cpus: "0.70"
+    mem_limit: 768m
+    memswap_limit: 1024m
+    pids_limit: 128
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5).read()"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mlflow-data:
+
+networks:
+  mlflow-net:
+    name: mlflow-net

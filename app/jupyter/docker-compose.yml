@@ -1,0 +1,27 @@
+services:
+  jupyter:
+    image: jupyter/base-notebook:latest
+    container_name: jupyter-bootcamp
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    volumes:
+      - jupyter-data:/home/jovyan
+      # Datasets del proyecto sanitario, copia local de solo lectura (mismos
+      # datos que monta Airflow desde su propia carpeta datos/).
+      - ./datos:/home/jovyan/datos:ro
+      - ./snippets:/home/jovyan/snippets:ro
+      - ./notebooks:/home/jovyan/notebooks
+    networks:
+      - mlflow-net
+    command: >
+      /bin/bash -c "python -m pip install --no-cache-dir ipywidgets && start-notebook.py --IdentityProvider.token=''"
+
+volumes:
+  jupyter-data:
+
+networks:
+  mlflow-net:
+    external: true
+    name: mlflow-net

@@ -1,0 +1,10 @@
+# Dependencias adicionales para los workers de Airflow (mlops_tasks, mlops_gpu_tasks, data_tasks).
+# Alineado con MLFlow_Server/client-requirements.txt (misma versión de mlflow que el servidor).
+mlflow==3.0.0
+scikit-learn
+cloudpickle
+skops
+pandas>=2.0
+tensorflow>=2.16
+ucimlrepo
+wfdb

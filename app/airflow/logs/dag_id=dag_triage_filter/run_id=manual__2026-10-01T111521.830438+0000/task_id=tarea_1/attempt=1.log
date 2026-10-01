@@ -1,0 +1,20 @@
+[2026-10-01T11:15:22.895+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2026-10-01T11:15:22.947+0000] {taskinstance.py:2632} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: dag_triage_filter.tarea_1 manual__2026-10-01T11:15:21.830438+00:00 [queued]>
+[2026-10-01T11:15:22.964+0000] {taskinstance.py:2632} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: dag_triage_filter.tarea_1 manual__2026-10-01T11:15:21.830438+00:00 [queued]>
+[2026-10-01T11:15:22.967+0000] {taskinstance.py:2885} INFO - Starting attempt 1 of 1
+[2026-10-01T11:15:22.984+0000] {taskinstance.py:2908} INFO - Executing <Task(PythonOperator): tarea_1> on 2026-10-01 11:15:21.830438+00:00
+[2026-10-01T11:15:22.999+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:70: DeprecationWarning: This process (pid=69) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2026-10-01T11:15:23.003+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'dag_triage_filter', 'tarea_1', 'manual__2026-10-01T11:15:21.830438+00:00', '--job-id', '13', '--raw', '--subdir', 'DAGS_FOLDER/01_triaje_script.py', '--cfg-path', '/tmp/tmpsuu5i87d']
+[2026-10-01T11:15:23.008+0000] {standard_task_runner.py:72} INFO - Started process 71 to run task
+[2026-10-01T11:15:23.012+0000] {standard_task_runner.py:105} INFO - Job 13: Subtask tarea_1
+[2026-10-01T11:15:23.119+0000] {task_command.py:467} INFO - Running <TaskInstance: dag_triage_filter.tarea_1 manual__2026-10-01T11:15:21.830438+00:00 [running]> on host 2831d4579589
+[2026-10-01T11:15:23.261+0000] {taskinstance.py:3158} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='dag_triage_filter' AIRFLOW_CTX_TASK_ID='tarea_1' AIRFLOW_CTX_EXECUTION_DATE='2026-10-01T11:15:21.830438+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-10-01T11:15:21.830438+00:00'
+[2026-10-01T11:15:23.264+0000] {taskinstance.py:740} INFO - ::endgroup::
+[2026-10-01T11:15:23.343+0000] {python.py:240} INFO - Done. Returned value was: /opt/***/datos/trisage_clean.csv
+[2026-10-01T11:15:23.412+0000] {taskinstance.py:349} INFO - ::group::Post task execution logs
+[2026-10-01T11:15:23.417+0000] {taskinstance.py:361} INFO - Marking task as SUCCESS. dag_id=dag_triage_filter, task_id=tarea_1, run_id=manual__2026-10-01T11:15:21.830438+00:00, execution_date=20261001T111521, start_date=20261001T111522, end_date=20261001T111523
+[2026-10-01T11:15:23.476+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 0
+[2026-10-01T11:15:23.511+0000] {taskinstance.py:3925} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2026-10-01T11:15:23.516+0000] {local_task_job_runner.py:245} INFO - ::endgroup::
