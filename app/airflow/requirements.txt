@@ -8,3 +8,4 @@ pandas>=2.0
 tensorflow>=2.16
 ucimlrepo
 wfdb
+tensorboard
