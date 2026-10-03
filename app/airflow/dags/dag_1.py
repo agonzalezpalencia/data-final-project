@@ -12,19 +12,23 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 
-################################## - Método lectura de 1er DAG - ############################################
-def leer_dataset():
-    triaje = pd.read_csv("/opt/airflow/datos/mimic-iv-ed-demo-2.2/mimic-iv-ed-demo-2.2/ed/triage.csv.gz")
+################################ - Método lectura y primera task - ##########################################
+def leer_dataset(ti):
+    csv_base = "/opt/airflow/datos/mimic-iv-ed-demo-2.2/mimic-iv-ed-demo-2.2/ed/triage.csv.gz"
+    triaje = pd.read_csv(csv_base)
     print(f"Filas: {triaje.shape[0]}")
     print(f"Columnas: {triaje.shape[1]}")
 
-    return "Finished reading!"
+    return csv_base
 #############################################################################################################
 
 
-################################### - Método procesado de 2do DAG - #########################################
-def procesar_dataset():
-    triaje = pd.read_csv("/opt/airflow/datos/mimic-iv-ed-demo-2.2/mimic-iv-ed-demo-2.2/ed/triage.csv.gz")
+################################### - Método procesado de Dataset - #########################################
+def procesar_dataset(ti):
+    # Utilizamos la TaskInstance para recibir el return de una tarea del mismo DAG
+    csv_base = ti.xcom_pull(task_ids="leer_dataset")
+
+    triaje = pd.read_csv(csv_base)
     # Eliminamos las filas con los valores nulos en los signos vitales necesarios para entrenamiento
     df = triaje[triaje['acuity'].notna() & triaje['o2sat'].notna() & triaje['temperature'].notna() & triaje['heartrate'].notna()].drop(columns=['subject_id', 'stay_id', 'chiefcomplaint'])
     
@@ -39,7 +43,7 @@ def procesar_dataset():
 
     print(df[:40])
 
-    # Guardamos el resultado del triaje limpio
+    # Guardamos el resultado del triaje limpio, no se guarda en /datos porque es solo lectura
     ruta_csv_limpio = "/opt/airflow/plugins/triage_limpio.csv"
     df.to_csv(ruta_csv_limpio)
 
@@ -47,9 +51,12 @@ def procesar_dataset():
 #############################################################################################################
 
 
-################################### - Método entrenamiento 3er DAG - ########################################
-def entrenar_modelos():
-    df = pd.read_csv("/opt/airflow/plugins/triage_limpio.csv")
+################################### - Método entrenamiento TF - #############################################
+def entrenar_modelo_tf(ti):
+    # Leemos la instancia del procesado del dataset (el return) para la ruta del csv limpio
+    csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
+
+    df = pd.read_csv(csv_limpio)
 
     X = df[['temperature', 'heartrate','resprate', 'o2sat', 'sbp', 'dbp','pain']].astype({
         'temperature': 'float32',
@@ -71,9 +78,6 @@ def entrenar_modelos():
         test_size=0.20,
         random_state=42
     )
-
-    # Modelo de Scikit-Learn de tipo de Bosque Aleatorio
-    rf = RandomForestClassifier(n_estimators=100, random_state=42)
 
     # Modelo de Tensorflow Keras de clasificación binaria
     normalizator = tf.keras.layers.Normalization(axis=-1)
@@ -111,13 +115,6 @@ def entrenar_modelos():
     mlflow.set_tracking_uri("http://mlflow:5000")
     mlflow.set_experiment('Experimento Entreno')
 
-    with mlflow.start_run(run_name="RandomForest_Base") as run_rf:
-        mlflow.sklearn.autolog()
-        rf.fit(X_train, y_train)
-        accuracy_rf = rf.score(X_test, y_test)      
-        id_rf = run_rf.info.run_id
-        print("Accuracy RandomForest:", accuracy_rf)
-
     with mlflow.start_run(run_name="Keras_Binary") as run_tf:
         mlflow.tensorflow.autolog()
         history = model.fit(X_train, y_train, epochs=25, batch_size=8, callbacks=[early_stopping], validation_data=(X_test, y_test))
@@ -125,13 +122,54 @@ def entrenar_modelos():
         id_tf = run_tf.info.run_id
         print("Accuracy Tensorflow:", accuracy_tf)
 
-    if (accuracy_tf > accuracy_rf):
-        mejor_run_id = id_tf
-    else:
-        mejor_run_id = id_rf
+    model_uri = f"runs:/{id_tf}/model"
+    mlflow.register_model(model_uri=model_uri, name="Clasificador_TF_Triaje")
+#############################################################################################################
 
-    model_uri = f"runs:/{mejor_run_id}/model"
-    mlflow.register_model(model_uri=model_uri, name="Clasificador_Triaje")
+
+################################### - Método entrenamiento RF - #############################################
+def entrenar_modelo_rf(ti):
+    # Leemos la instancia del procesado del dataset (el return) para la ruta del csv limpio
+    csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
+
+    df = pd.read_csv(csv_limpio)
+
+    X = df[['temperature', 'heartrate','resprate', 'o2sat', 'sbp', 'dbp','pain']].astype({
+        'temperature': 'float32',
+        'heartrate': 'float32',
+        'resprate': 'float32',
+        'o2sat': 'float32',
+        'sbp': 'float32',
+        'dbp': 'float32',
+        'pain': 'float32'
+    }).to_numpy()
+
+    y = df[['acuity']].to_numpy(dtype=np.float32)
+
+    y = y.ravel()
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.20,
+        random_state=42
+    )
+
+    # Modelo de Scikit-Learn de tipo de Bosque Aleatorio
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
+
+    mlflow.set_tracking_uri("http://mlflow:5000")
+    mlflow.set_experiment('Experimento Entreno')
+
+    with mlflow.start_run(run_name="RandomForest_Base") as run_rf:
+        mlflow.sklearn.autolog()
+        rf.fit(X_train, y_train)
+        accuracy_rf = rf.score(X_test, y_test)      
+        id_rf = run_rf.info.run_id
+        print("Accuracy RandomForest:", accuracy_rf)
+
+    model_uri = f"runs:/{id_rf}/model"
+    mlflow.register_model(model_uri=model_uri, name="Clasificador_RF_Triaje")
 #############################################################################################################
 
 
@@ -140,7 +178,7 @@ default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email_since': False,
-    'retries': 1,
+    'retries': 0,
     'retry_delay': timedelta(minutes=5),
 }
 #############################################################################################################
@@ -149,7 +187,7 @@ default_args = {
 with DAG(
     'data_reading',
     default_args=default_args,
-    description='Un simple DAG de prueba Hello World',
+    description='DAG que procesa el Dataset de Triaje y lo usa para entrenar modelos catalogados en MLFlow',
     schedule_interval='@daily',
     start_date=datetime(2026, 10, 1),
     catchup=False,
@@ -162,56 +200,23 @@ with DAG(
         queue="low_tier_tasks"
     )
 
-    disparar_procesado_datos = TriggerDagRunOperator(
-        task_id="disparar_dag_procesado",
-        trigger_dag_id="data_processing",
-        wait_for_completion=False
-    )
-
-    leer_dataset_task >> disparar_procesado_datos
-#############################################################################################################
-
-
-################################# - DAG Procesado - Prepara CSV Entreno - ###################################
-with DAG(
-    'data_processing',
-    default_args=default_args,
-    description='Un simple DAG de prueba Hello World',
-    schedule_interval=None,
-    catchup=False,
-    tags=['example'],
-) as dag:
-
     procesar_dataset_task = PythonOperator(
         task_id='procesar_dataset',
         python_callable=procesar_dataset,
         queue="cpu_tasks"
     )
 
-    disparar_entrenamiento_modelos = TriggerDagRunOperator(
-        task_id="disparar_dag_entrenamiento",
-        trigger_dag_id="model_training",
-        wait_for_completion=False
+    entrenar_modelo_tf_task = PythonOperator(
+        task_id='entrenar_modelo_tf',
+        python_callable=entrenar_modelo_tf,
+        queue='gpu_tasks'
     )
-
-    procesar_dataset_task >> disparar_entrenamiento_modelos
-#############################################################################################################
-
-
-########################### - DAG Modelos_1 - Utiliza MLFlow para entrenar - ################################
-with DAG(
-    'model_training',
-    default_args=default_args,
-    description='Un simple DAG de prueba Hello World',
-    schedule_interval=None,
-    catchup=False,
-    tags=['example'],
-) as dag:
-
-    entrenar_modelos_task = PythonOperator(
-        task_id='entrenar_modelos',
-        python_callable=entrenar_modelos,
+    
+    entrenar_modelo_rf_task = PythonOperator(
+        task_id='entrenar_modelo_rf',
+        python_callable=entrenar_modelo_rf,
         queue='gpu_tasks'
     )
 
-    entrenar_modelos_task
+    leer_dataset_task >> procesar_dataset_task >> [entrenar_modelo_tf_task, entrenar_modelo_rf_task]
+#############################################################################################################
