@@ -6,8 +6,11 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from src.triaje.utils import plot_keras_history
 
 def entrenar_modelo_tf(ti):
+    # Métricas del sistema
+    mlflow.enable_system_metrics_logging()
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
     df = pd.read_csv(csv_limpio)
 
@@ -44,6 +47,8 @@ def entrenar_modelo_tf(ti):
     with mlflow.start_run(run_name="Keras_Binary") as run_tf:
         mlflow.tensorflow.autolog()
         history = model.fit(X_train, y_train, epochs=25, batch_size=8, callbacks=[early_stopping], validation_data=(X_test, y_test))
+        # Función para dibujar las gráficas y guardar el artefacto
+        plot_keras_history(history)
         accuracy_tf = history.history['val_binary_accuracy'][-1]
         id_tf = run_tf.info.run_id
         print("Accuracy Tensorflow:", accuracy_tf)
