@@ -1,6 +1,8 @@
 __pycache__/*
 */__pycache__/*
 __pycache__/
+datos/
+.vscode/
 app/jupyter/datos/
 .vscode/
 app/airflow/logs
