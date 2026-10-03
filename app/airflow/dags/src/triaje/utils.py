@@ -1,4 +1,6 @@
+import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import mlflow
 
 def plot_keras_history(history):
@@ -28,3 +30,22 @@ def plot_keras_history(history):
 
     # Guardar en los artefactos de MLflow
     mlflow.log_artifact(path_keras, artifact_path="graficos")
+
+
+def plot_matriz_confusion(y_true, y_pred, nombre_modelo):
+    # Calculamos la matriz con scikit-learn
+    cm = confusion_matrix(y_true, y_pred)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Urgente', 'Urgente'])
+    disp.plot(ax=ax, cmap='Blues', colorbar=False, values_format='d')
+    
+    plt.title(f'Matriz de Confusión - {nombre_modelo}')
+    plt.tight_layout()
+
+    path_cm = f"/tmp/cm_{nombre_modelo}.png"
+    plt.savefig(path_cm)
+    plt.close()
+
+    # Subimos la imagen a los artefactos de MLflow
+    mlflow.log_artifact(path_cm, artifact_path="graficos")

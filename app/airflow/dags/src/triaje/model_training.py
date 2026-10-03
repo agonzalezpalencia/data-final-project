@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from src.triaje.utils import plot_keras_history
+from src.triaje.utils import plot_keras_history, plot_matriz_confusion
 
 def entrenar_modelo_tf(ti):
     # Métricas del sistema
@@ -50,6 +50,15 @@ def entrenar_modelo_tf(ti):
         # Función para dibujar las gráficas y guardar el artefacto
         plot_keras_history(history)
         accuracy_tf = history.history['val_binary_accuracy'][-1]
+        # Obtenemos las predicciones sobre el modelo para la matriz de confunsion
+        y_pred_probs = model.predict(X_test)
+        # Como usamos una sigmoide (0 a 1), convertimos la probabilidad en 0 o 1 usando un umbral de 0.5
+        y_pred = (y_pred_probs >= 0.5).astype(int).ravel()
+        # Llamada al método para crear un artefacto con la matrix de confusión
+        # El primer parámetro hace referencia a los resultados obtenidos en el test, 
+        # el segundo a la predicciones, 
+        # el tercero es el nombre del modelo para dibujar en la gráfica
+        plot_matriz_confusion(y_test, y_pred, "Keras_Red_Neuronal")
         id_tf = run_tf.info.run_id
         print("Accuracy Tensorflow:", accuracy_tf)
 
@@ -77,7 +86,14 @@ def entrenar_modelo_rf(ti):
     with mlflow.start_run(run_name="RandomForest_Base") as run_rf:
         mlflow.sklearn.autolog()
         rf.fit(X_train, y_train)
-        accuracy_rf = rf.score(X_test, y_test)      
+        accuracy_rf = rf.score(X_test, y_test)
+        # Predicciones para realizar la matriz de confusión
+        y_pred = rf.predict(X_test)
+        # Llamada al método para crear un artefacto con la matrix de confusión
+        # El primer parámetro hace referencia a los resultados obtenidos en el test, 
+        # el segundo a la predicciones, 
+        # el tercero es el nombre del modelo para dibujar en la gráfica
+        plot_matriz_confusion(y_test, y_pred, "RandomForest")
         id_rf = run_rf.info.run_id
         print("Accuracy RandomForest:", accuracy_rf)
 
