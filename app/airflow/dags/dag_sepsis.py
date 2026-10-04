@@ -31,7 +31,7 @@ def sepsis_ds_charge(ti):
 
     # Leemos el parquet que hemos procesado previamente desde el cuaderno de Jupyter (notebook_abel_sepsis.ipynb)
     sepsis_df = pd.read_parquet(
-        "/opt/airflow/datos/sepsis_parquet_raw.parquet"
+        "/opt/airflow/parquets/sepsis_parquet_raw.parquet"
     )
 
     return guardar(sepsis_df, "01_carga")
