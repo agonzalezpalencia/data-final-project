@@ -5,4 +5,5 @@ datos/
 .vscode/
 app/jupyter/datos/
 .vscode/
-app/airflow/logs
+logs/
+plugins/
