@@ -49,3 +49,42 @@ def plot_matriz_confusion(y_true, y_pred, nombre_modelo):
 
     # Subimos la imagen a los artefactos de MLflow
     mlflow.log_artifact(path_cm, artifact_path="graficos")
+    
+# Función para graficar los resultados del GridSearchCV
+def plot_grid_search_results(res, best_model_index):
+    accuracy_list = res["mean_test_accuracy"]
+    loss_list = -res["mean_test_neg_log_loss"]
+    model_indices = range(len(res))
+        
+    # Obtener índice del mejor modelo de los 42 según (refit:'neg_log_loss')
+    # best_model_index = grid.best_index_
+
+    # Gráfico
+    plt.figure(figsize=(15,5))
+
+    # Gráfico 1: Comparando pérdida entre modelos
+    plt.subplot(1,2,1)
+    plt.plot(model_indices, loss_list, color='blue')
+    plt.plot(best_model_index, loss_list[best_model_index], marker=".", markersize=15, color="gold", markeredgecolor="black", label="Mejor modelo")
+    plt.xlabel("Combinaciones de Hiperparámetros")
+    plt.ylabel("Loss (Log-Loss)")
+    plt.title("Comparación de pérdida (Loss) entre modelos")
+    plt.legend()
+
+    # Gráfico 2: Comparando precisión entre modelos
+    plt.subplot(1,2,2)
+    plt.plot(model_indices, accuracy_list, color='orange')
+    plt.plot(best_model_index, accuracy_list[best_model_index], marker=".", markersize=15, color="gold", markeredgecolor="black", label="Mejor modelo")
+    plt.xlabel("Combinaciones de Hiperparámetros")
+    plt.ylabel("Precisión (Accuracy)")
+    plt.title("Comparación de precisión (Accuracy) entre modelos")
+    plt.legend()
+
+    plt.tight_layout()
+    
+    path_grid = f"/tmp/grid_search_comparative.png"
+    plt.savefig(path_grid)
+    plt.close()
+    
+    # Subir a artefactos de MLflow
+    mlflow.log_artifact(path_grid, artifact_path="graficos")
