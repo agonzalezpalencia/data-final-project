@@ -55,7 +55,7 @@ services:
   postgres:
     image: public.ecr.aws/docker/library/postgres:15-alpine
     cpus: 1.00
-    mem_limit: 512m
+    mem_limit: 1024m
     mem_reservation: 256m
     environment:
       POSTGRES_USER: airflow
@@ -138,7 +138,7 @@ services:
     <<: *airflow-common
     command: celery worker --queues=default,cpu_tasks --concurrency=4
     cpus: 1.50
-    mem_limit: 1024m
+    mem_limit: 4096m
     mem_reservation: 384m
     restart: always
     depends_on:
@@ -149,7 +149,7 @@ services:
     <<: *airflow-common
     command: celery worker --queues=default,cpu_tasks --concurrency=4
     cpus: 1.50
-    mem_limit: 1024m
+    mem_limit: 4096m
     mem_reservation: 384m
     restart: always
     depends_on:
@@ -187,7 +187,7 @@ services:
     <<: *airflow-common
     command: celery worker --queues=gpu_tasks --concurrency=1
     cpus: 1.50
-    mem_limit: 1024m
+    mem_limit: 3072m
     mem_reservation: 384m
     restart: always
     depends_on:
