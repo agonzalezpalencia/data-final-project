@@ -57,11 +57,22 @@ Campos finales del dataset:
 ### 4.3. Partición train/test
 
 
-## 5. El modelo
+
+## 5. Los modelos
+
+> Todos los modelos tendrán una semilla con valor de 42.
+
+Hemos seleccionado 3 modelos para este dataset. 
+
+El primero sería un modelo de clasificación binaria de Tensorflow la API de `Keras.Sequential` para poder ver comparaciones entre las librerias de Tensorflow y Scikit-Learn
+
+El segundo modelo que hemos integrado es un `RandomForestClassifier` de Scikit-Learn, que se basa en una estructura de árboles de decisión para ofrecer predicciones y funciona muy bien con datasets de tamaños no muy elevados, como del que disponemos.
 
 ### 5.1. Pruebas
 
-Se hacen pruebas con varias configuraciones de hiperparámetros del modelo para seleccionar la mejor entre las 42 diferentes.
+Utilizamos Jupyter Notebook para hacer pruebas sin necesidad de ejecutar el flujo de Airflow descrito posteriormente, además que el sistema de celdas nos permitió cambiar parámetros del modelo y volver a lanzarlo sin necesidad de modificar secciones como la lectura o preparado del dataset o las gráficas que se ven posteriormente.
+
+Para LogisticRegression se hacen pruebas con varias configuraciones de hiperparámetros del modelo para seleccionar la mejor entre las 42 diferentes.
 
 ![alt text](img/image-4.png)
 
@@ -69,8 +80,16 @@ Estos son los datos concretos de las 10 mejores configuraciones:
 
 ![alt text](img/image-5.png)
 
-
 ### 5.2. Creación
+
+El modelo de Tensorflow cuenta con con 4 capas:
+- Capa de entrada con una forma de 7x1.
+- Una capa de normalización ajustada a la porción de entrenamiento de X.
+- Una capa de procesamiento de 32 neuronas con activación `relu`.
+- La capa de salida de 1 neurona con activación `sigmoid` para la clasificación binaria.
+Se ha usado para compilarlo un optimizador del tipo AdamW, que solo supone un cambio en la tasa de descarte de pesos, solo perceptible en entrenamientos largos con los valores por defecto; como medida de pérdida usamos `BinaryCrossentropy`, siendo lo estandar para el tipo de clasificación que vamos a usar; la métrica principal que usaremos es la `BinaryAccuracy` para saber la exactitud del modelo.
+
+En cuanto al RandomForest, la creación que usamos es completamente por defecto, siendo los campos que asignamos `n_estimators=100` y la semilla de creación a 42.
 
 La combinación final de hiperparámetros elegida en base a los resultados anteriores es la siguiente:
 
@@ -84,7 +103,15 @@ final_params = {
 
 ### 5.3. Entrenamiento
 
+Con ambos modelos usaremos la partición mencionada anteriormente de 80/20 entre entrenamiento y testing.
+
+Para el entrenamiento establecemos un `callback` sencillo que pare el entrenamiento cuando se pierda exactitud durante 3 épocas seguidas, restaurando el valor. Debido al pequeño tamaño del dataset, establecemos un tamaño de lotes de entrenamiento de 8, y establecemos los datos de X_train e y_train como los datos de validación. Importante guardar en una variable las métricas del entrenamiento.
+
+El entrenamiento del RandomForest será solo pasando los datos de entrenamiento a la función, en este caso no se devolverá una variable con métricas.
+
 ### 5.4. Evaluación
+
+La evaluación que usamos para ambos modelos será la exactitud del modelo y la pérdida, ya que disponemos de un volumen de datos bastante bajo, solo nos intentaremos alejar lo máximo posible del azar sin que haya un sobreajuste a los datos. Con esto el rango que conseguimos para la exactitud ronda el 70%.
 
 ### 5.5. Predicción
 
