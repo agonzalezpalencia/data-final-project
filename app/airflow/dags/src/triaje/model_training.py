@@ -4,9 +4,15 @@ import mlflow.tensorflow
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedStratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from src.triaje.utils import plot_keras_history, plot_matriz_confusion
+from src.triaje.utils import plot_keras_history, plot_matriz_confusion, plot_grid_search_results
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 
 def entrenar_modelo_tf(ti):
     # Métricas del sistema
@@ -99,3 +105,85 @@ def entrenar_modelo_rf(ti):
 
     model_uri = f"runs:/{id_rf}/model"
     mlflow.register_model(model_uri=model_uri, name="Clasificador_RF_Triaje")
+    
+def entrenar_modelo_lr(ti):
+    mlflow.enable_system_metrics_logging()
+    csv_limpio = ti.xcom_pull(task_ids="procesar_dataset_edstays")
+    df = pd.read_csv(csv_limpio)
+    
+    # Declaramos las columnas númericas 
+    numerical_columns = ["temperature", "heartrate", "resprate", "o2sat", "sbp", "dbp", "pain", "pain_not_assessable", "shock_index", "pulse_pressure", "arrival_hour"]
+
+    # Definimos las observaciones
+    X = df[numerical_columns + ["arrival_transport", "chiefcomplaint"]]
+
+    # Definimos las etiquetas o los valores que tiene que predecir el modelo (Hacemos que 1 y 2 se normaicen a 0 y 3,4,5 se normalicen a 1)
+    y = (df["acuity"] <= 2).astype(int)
+    
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+    
+    # Declaramos la preparación que haremos sobre los datos
+    prep = make_column_transformer(
+        # Con SimpleImputer rellenamos los huecos que no contengan números para no sesgar los datos
+        (make_pipeline(SimpleImputer(strategy="median", add_indicator=True), StandardScaler()), numerical_columns),
+        # Como en `arrival_transport` separamos en categorías, OneHotEncoder nos ayuda a separar las cateorías y transformarlas a números
+        (OneHotEncoder(handle_unknown="ignore"), ["arrival_transport"]),
+        # Normalizamos la columna de 'chiefcomplaint' estableciendo pesos según las repeticiones de las palabras
+        (TfidfVectorizer(ngram_range=(1,2), min_df=2), "chiefcomplaint")
+    )
+    
+    # Declaramos el modelo que vamos a entrenar utilizando los datos que hemos preparado en los pasos anteriores, además utilizamos el algoritmo
+    # de LogisticRegression con un máximo de 5000 iteraciones sobre nuestros datos
+    model = make_pipeline(prep, LogisticRegression(max_iter=5000))
+
+    # Usamos RepeatedStratifiedKFold para recorrer los datos de múltiples maneras distintas y evaluar el modelo con mayor fiabilidad.
+    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=42)
+
+    # Utilizamos GridSearchCV para poder especificar el modelo que vamos a entrenar y los hiperparámetros que vamos a utilizar
+    grid = GridSearchCV(
+        model,
+        {
+            "logisticregression__C": [0.01, 0.03, 0.1, 0.3, 1, 3, 10],
+            "logisticregression__class_weight": ["balanced", None],
+            "columntransformer__tfidfvectorizer__min_df": [1, 2, 3],
+            # Especificamos las flags que vamos a usar a la hora de usar GridSearchCV
+        }, 
+        cv=cv, 
+        scoring=["accuracy", "neg_log_loss"], 
+        n_jobs=2, # evitar saturación del worker 
+        refit='neg_log_loss', 
+        verbose=3, 
+        return_train_score=True
+    )
+    
+    mlflow.set_tracking_uri("http://mlflow:5000")
+    mlflow.set_experiment("Experimento Entreno")
+    
+    
+    with mlflow.start_run(run_name="LogisticRegression_GridSearch") as run_lr:
+        # mlflow.sklearn.autolog()
+        # Entrenamiento del modelo
+        grid.fit(X_train,y_train)
+        
+        res_df = pd.DataFrame(grid.cv_results_)
+        
+        # Guardar artefactos visuales
+        plot_grid_search_results(res_df, grid.best_index_)
+        
+        y_pred = grid.predict(X_test)
+        plot_matriz_confusion(y_test, y_pred, "LogisticRegression")
+        
+        accuracy_lr = grid.score(X_test, y_test)
+        mlflow.log_metric("accuracy_test", accuracy_lr)
+        mlflow.log_params(grid.best_params_)
+        
+        # Guardar el mejor modelo en la carpeta "model" en MLflow
+        mlflow.sklearn.log_model(grid.best_estimator_, artifact_path="model")
+        
+        id_lr = run_lr.info.run_id
+        print("Accuracy de Logistic Regression: ", accuracy_lr)
+        
+    model_uri = f"runs:/{id_lr}/model"
+    mlflow.register_model(model_uri=model_uri, name="Clasificador_LR_Triaje")
+        
