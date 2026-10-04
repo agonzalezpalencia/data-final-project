@@ -73,8 +73,30 @@ Campos finales del dataset:
 
 ### 6. Flujo Airflow
 
+El flujo de trabajo se gestiona a través de un DAG (Triaje_DAG) dividido en varias tareas modulares que se ejecutan en colas específicas de Celery:
+
+|                        | Descripción                                                                                                                       | Queue              | Fichero              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------------- |
+| **leer_dataset**       | Carga inicial del archivo *triaje.csv.gz* y guarda los datos en un dataframe.                                                     | ``low_tier_tasks`` | *data_processing.py* |
+| **procesar_dataset**   | Limpia los datos y los filtra para guardarlos en un archivo csv (triaje_limpio.csv). Elimina valores nulos y binariza ``acuity``. | ``cpu_tasks``      | *data_processing.py* |
+| **entrenar_modelo_rf** | Entrena en paralelo un clasificador Random Forest Classifier. Evalúa precisión y registra modelo y matriz de confusión.           | ``gpu_tasks``      | *model_training.py*  |
+| **entrenar_modelo_tf** | Entrena en paralelo una red neuronal en Keras y guarda artefactos MLflow.                                                         | ``gpu_tasks``      | *model_training.py*  |
+**Estructura de ejecución del flujo:**
+
+![alt text](img/image.png)
+
 
 ### 7. Versionado con MLflow
+
+Los artefactos se gestionan a través del archivo *src/triaje/utils.py* mediante las funciones ``plot_keras_history`` y ``plot_matriz_confusion`` que se registran directamente en la interfaz MLflow.
+
+Matriz de confusión de la Red Neuronal Keras:
+
+![alt text](img/cm_Keras_Red_Neuronal.png)
+
+Curvas de Loss y Acuracy de entrenamiento de Keras:
+
+![alt text](img/keras_history.png)
 
 
 ### 8. Limitaciones y consideraciones
