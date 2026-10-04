@@ -58,7 +58,7 @@ def entrenar_modelo_tf(ti):
         # El primer parámetro hace referencia a los resultados obtenidos en el test, 
         # el segundo a la predicciones, 
         # el tercero es el nombre del modelo para dibujar en la gráfica
-        plot_matriz_confusion(y_test, y_pred, "Keras_Red_Neuronal")
+        plot_matriz_confusion(y_test, y_pred, "Keras_Red_Neuronal", display_labels=['No urgente', 'Urgente'])
         id_tf = run_tf.info.run_id
         print("Accuracy Tensorflow:", accuracy_tf)
 
@@ -93,7 +93,7 @@ def entrenar_modelo_rf(ti):
         # El primer parámetro hace referencia a los resultados obtenidos en el test, 
         # el segundo a la predicciones, 
         # el tercero es el nombre del modelo para dibujar en la gráfica
-        plot_matriz_confusion(y_test, y_pred, "RandomForest")
+        plot_matriz_confusion(y_test, y_pred, "RandomForest", display_labels=['No urgente', 'Urgente'])
         id_rf = run_rf.info.run_id
         print("Accuracy RandomForest:", accuracy_rf)
 

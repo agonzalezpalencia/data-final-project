@@ -6,12 +6,13 @@ from airflow.operators.python import PythonOperator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import average_precision_score, accuracy_score
 from sklearn.metrics import log_loss
+from src.triaje.utils import plot_matriz_confusion
 import pandas as pd
 import numpy as np
 import os
 
 # Ruta temporal donde se irán almacenando los datasets a medida que los vayamos filtrando 
-tmp_path = "/opt/airflow/datos/sepsis_tmp/"
+tmp_path = "/opt/airflow/plugins/"
 
 # Método al que pasamos el dataframe y el nombre del archivo para poder almacenarlo en la carpeta temporal
 def guardar(df, nombre):
@@ -31,7 +32,7 @@ def sepsis_ds_charge(ti):
 
     # Leemos el parquet que hemos procesado previamente desde el cuaderno de Jupyter (notebook_abel_sepsis.ipynb)
     sepsis_df = pd.read_parquet(
-        "/opt/airflow/parquets/sepsis_parquet_raw.parquet"
+        "/opt/airflow/plugins/sepsis_parquet_raw.parquet"
     )
 
     return guardar(sepsis_df, "01_carga")
@@ -191,12 +192,17 @@ def sepsis_rd_train(ti):
         pred_val = rf.predict_proba(X_val)[:, 1]
         pred_rf = rf.predict_proba(X_test)[:, 1]
 
+        y_pred_bin = (pred_rf >= 0.5).astype(int)
+
         print("AUPRC validación:", average_precision_score(y_val, pred_val))
         print("AUPRC test:", average_precision_score(y_test, pred_rf))
         print("Pérdida validación:", log_loss(y_val, pred_val))
         print("Pérdida test:", log_loss(y_test, pred_rf))
         print("Accuracy validación:", accuracy_score(y_val, pred_val > 0.5))
         print("Accuracy test:", accuracy_score(y_test, pred_rf > 0.5))
+
+        # Llamada a la utilidad de matriz de confusión y subida como artefacto a MLflow
+        plot_matriz_confusion(y_test, y_pred_bin, "RandomForest_Sepsis", display_labels=['No sepsis', 'Sepsis'])
 
         id_rf = run_rf.info.run_id
 

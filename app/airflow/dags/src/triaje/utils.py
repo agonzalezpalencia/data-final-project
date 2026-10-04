@@ -32,12 +32,12 @@ def plot_keras_history(history):
     mlflow.log_artifact(path_keras, artifact_path="graficos")
 
 
-def plot_matriz_confusion(y_true, y_pred, nombre_modelo):
+def plot_matriz_confusion(y_true, y_pred, nombre_modelo, display_labels):
     # Calculamos la matriz con scikit-learn
     cm = confusion_matrix(y_true, y_pred)
 
     fig, ax = plt.subplots(figsize=(6, 6))
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No Urgente', 'Urgente'])
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=display_labels)
     disp.plot(ax=ax, cmap='Blues', colorbar=False, values_format='d')
     
     plt.title(f'Matriz de Confusión - {nombre_modelo}')
