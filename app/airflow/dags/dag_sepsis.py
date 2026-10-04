@@ -14,7 +14,7 @@ from src.sepsis.model_training import sepsis_rd_train
 
 ################################ - Argumentos comunes - #####################################################
 default_args = {
-    'owner': 'airflow',
+    'owner': 'agonzalezpalencia',
     'depends_on_past': False,
     'email_since': False,
     'retries': 0,
@@ -22,7 +22,7 @@ default_args = {
 }
 #############################################################################################################
 
-################################ - DAG Sepsis - ########################################
+############################################ - DAG Sepsis - #################################################
 with DAG(
     'sepsis_dag',
     default_args=default_args,
