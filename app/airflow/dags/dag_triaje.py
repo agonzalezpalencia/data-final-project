@@ -14,7 +14,7 @@ from airflow.operators.python import BranchPythonOperator
 from airflow.operators.empty import EmptyOperator
 
 default_args = {
-    'owner': 'airflow',
+    'owner': 'MLOps',
     'depends_on_past': False,
     'email_since': False,
     'retries': 0,
@@ -49,6 +49,7 @@ with DAG(
     schedule_interval='@monthly',
     start_date=datetime(2026, 10, 4),
     catchup=False,
+    max_active_runs=1,
     tags=['urgencias', 'mlflow'],
     params={
         # Poner: 'TF' para Tensorflow, 'RF' para RandomForestClassifier y 'LR' para LogisticRegression
