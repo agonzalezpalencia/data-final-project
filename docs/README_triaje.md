@@ -2,9 +2,13 @@
 
 ## 1. Contexto y objetivos
 
+La saturación de las urgencias representa un desafío para la eficiencia operativa. La correcta priorización de un paciente a su llegada a urgencias es vital para garantizar que aquellos con condiciones críticas sean atendidos con la mayor brevedad posible, optimizando los recursos disponibles.
+
+Se requiere entrenar, diseñar e integrar un modelo con el objetivo de determinar el nivel de urgencia de un paciente a su llegada a urgencias permitiendo una priorización más ágil y eficaz.
+
 ## 2. Dataset (MIMIC-IV-ED Demo)
 
-Dataset: MIMIC-IV-ED Demo
+Dataset: [MIMIC-IV-ED Demo](https://physionet.org/content/mimic-iv-ed-demo/2.2/)
 Número de registros brutos: 222
 Campos: 
     1. subject_id	
@@ -23,8 +27,14 @@ Campos:
 
 `acuity`
 
+La variable que buscamos predecir, llamada acuity, indica el nivel de urgencia o la gravedad con la que llega un paciente a urgencias. Funciona como una escala del 1 al 5: los números más bajos (como el 1 y el 2) corresponden a situaciones críticas que exigen atención médica inmediata para evitar riesgos vitales, mientras que los valores del 3 al 5 son para casos más estables o menores. 
+
+Para que al modelo le resulte más sencillo entenderlo, esta escala se simplifica en dos grandes grupos (separando los casos más graves de los que pueden esperar), lo que sirve de guía para que el sistema aprenda a relacionar las constantes vitales del paciente con la prioridad médica real que recibió.
 
 ## 3. Análisis del dataset
+Para el desarrollo y entrenamiento del sistema de triaje predictivo se ha empleado el conjunto de datos [MIMIC-IV-ED](https://physionet.org/content/mimic-iv-ed-demo/2.2/) en su versión de demostración (Demo 2.2) disponible en PhysioNet.
+
+Este dataset proporciona registros clínicos estructurados, anónimos y de alta fidelidad procedentes de los servicios de urgencias de un hospital de gran escala, simulando un entorno clínico real y complejo.
 
 ### 3.1. Matriz correlación
 
@@ -56,7 +66,7 @@ Campos finales del dataset:
 
 ### 4.3. Partición train/test
 
-
+En los tres modelos se aplica una partición estándar del conjunto de datos del 80% para entrenamiento (X_train, y_train) y un 20% para prueba (X_test, y_test), fijando una semilla aleatoria (random_state=42) para asegurar la reproducibilidad de los resultados.
 
 ## 5. Los modelos
 
