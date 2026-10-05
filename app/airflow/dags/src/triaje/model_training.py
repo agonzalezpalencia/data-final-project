@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedStratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from src.triaje.utils import plot_keras_history, plot_matriz_confusion, plot_grid_search_results
+from src.utils import plot_keras_history, plot_matriz_confusion, plot_grid_search_results
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.compose import make_column_transformer

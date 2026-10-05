@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import average_precision_score, accuracy_score
 from sklearn.metrics import log_loss
 from mlflow.models import infer_signature
+from src.utils import plot_matriz_correlacion
 import pandas as pd
 
 # Método que permite realizar el entrenamiento del modelo de Sepsis usando el algoritmo de RandomForest de Scikit-Learn
@@ -44,6 +45,13 @@ def sepsis_rd_train(ti):
         rf.fit(X_tr, y_tr) # Realizamos el entrenamiento
         y_pred = pd.Series(rf.predict(X_tr), name="SepsisLabel") # Guardamos las predicciones que ha hecho el modelo
         signature = infer_signature(X_tr, y_pred) # Creamos la firma con los datos de entrada y salida en MLFlow
+
+        
+        plot_matriz_correlacion(
+            dataframe=tr, 
+            columns_to_drop=['SepsisLabel'], 
+            nombre_grafico="matriz_correlacion"
+        )
 
         # Usamos el log de sklearn que nos proporciona MLFlow para poder poner los datos de entrada y salida del modelo registrados en MLFlow
         mlflow.sklearn.log_model(
