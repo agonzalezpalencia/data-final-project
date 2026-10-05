@@ -3,6 +3,49 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import mlflow
 
+def enrutador_procesado (**kwargs):
+    # Recuperamos el params, usamos un valor vacío por defecto para evitar errores de comparación
+    opciones_elegidas = kwargs['params'].get('modelos_a_entrenar', '')
+
+    tareas_siguientes =[]
+
+    # Se realizará el primer procesado para RF o TF
+    if 'RF' in opciones_elegidas or 'TF' in opciones_elegidas:
+        tareas_siguientes.append("procesar_dataset")
+        print("Se realizará el procesado para Tensorflow o RandomForest")
+
+    # Se realizará el segundo procesado para LR
+    if 'LR' in opciones_elegidas:
+        tareas_siguientes.append("procesar_dataset_edstays")
+        print("Se realizará el procesado para LogisticRegression")
+
+    # Si no se selecciona ningún modelo o se escribe mal se controla el abandonar el flujo
+    if not tareas_siguientes:
+        tareas_siguientes.append("abandonar_flujo")
+        print("No se ha introducido ningún modelo a entrenar... Saliendo")
+
+    return tareas_siguientes
+
+def enrutador_modelos (**kwargs):
+    # Recuperamos el params, usamos un valor vacío por defecto para evitar errores de comparación
+    opciones_elegidas = kwargs['params'].get('modelos_a_entrenar', '')
+
+    tareas_siguientes =[]
+
+    # Se realizará el primer procesado para RF o TF
+    if 'RF' in opciones_elegidas:
+        tareas_siguientes.append("entrenar_modelo_rf")
+        print("Se procede al entrenamiento del RandomForest")
+
+    # Se realizará el segundo procesado para LR
+    if 'TF' in opciones_elegidas:
+        tareas_siguientes.append("entrenar_modelo_tf")
+        print("Se procede al entrenamiento del modelo de Tensorflow")
+
+    # No hay descarte del flujo ya que no llega aquí si no se selecciona RF o TF
+
+    return tareas_siguientes
+
 def plot_keras_history(history):
     # Método para dibujar gráfica de loss y accuracy en modelos
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
