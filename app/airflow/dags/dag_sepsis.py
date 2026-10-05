@@ -14,7 +14,7 @@ from src.sepsis.model_training import sepsis_rd_train
 
 ################################ - Argumentos comunes - #####################################################
 default_args = {
-    'owner': 'agonzalezpalencia',
+    'owner': 'MLOps',
     'depends_on_past': False,
     'email_since': False,
     'retries': 0,
@@ -24,14 +24,14 @@ default_args = {
 
 ############################################ - DAG Sepsis - #################################################
 with DAG(
-    'sepsis_dag',
+    'Sepsis_DAG',
     default_args=default_args,
     description='DAG que procesa los pacientes de Sepsis al completo y entrena un modelo de Scikit Learn usando el algoritmo RandomForest',
     schedule_interval='@monthly',
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
-    tags=['sepsis', 'agonzalezpalencia'],
+    tags=['mlflow', 'sepsis'],
 ) as dag:
 
     sepsis_ds_charge_task = PythonOperator(
