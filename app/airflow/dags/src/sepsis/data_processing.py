@@ -6,7 +6,6 @@ from airflow.operators.python import PythonOperator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import average_precision_score, accuracy_score
 from sklearn.metrics import log_loss
-from src.utils import plot_matriz_correlacion
 import pandas as pd
 import numpy as np
 import os
@@ -36,9 +35,6 @@ def sepsis_ds_charge(ti):
     sepsis_df = pd.read_parquet(
         "/opt/airflow/parquets/sepsis_parquet_raw.parquet"
     )
-
-    # Dibuja una matriz de correlación a partir de un df
-    plot_matriz_correlacion(sepsis_df)
 
     return guardar(sepsis_df, "01_carga")
 
@@ -125,9 +121,6 @@ def sepsis_feature_engineering(ti):
 
     # Índice de shock anafiláctico, nos sirve para comparar la gravedad del paciente
     sepsis_df['shock_index'] = sepsis_df['HR'] / sepsis_df['SBP']
-
-    # Dibuja una matriz de correlación a partir de un df
-    plot_matriz_correlacion(sepsis_df)
 
     # Guardamos el dataframe con los cambios realizados y lo recogeremos en el siguiente paso
     return guardar(sepsis_df, "06_features")

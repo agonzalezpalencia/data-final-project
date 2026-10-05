@@ -91,18 +91,37 @@ def plot_grid_search_results(res, best_model_index):
 
     from sklearn.metrics import log_loss
 
-def plot_matriz_correlacion(dataframe):
-    #look at feature correlations
-    corr = dataframe.drop(columns=ID).corr()
-    mask = np.triu(np.ones_like(corr, dtype=np.bool))
-    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+def plot_matriz_correlacion(dataframe, columns_to_drop=None, nombre_grafico="matriz_correlacion"):
+    # filtrar columnas si se especifica
+    df_corr = dataframe.drop(columns=columns_to_drop) if columns_to_drop else dataframe
+    
+    # calcular matriz de correlación
+    corr = df_corr.corr()
+    
+    # Mask para la mitad superior (opcional)
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+    corr_masked = corr.mask(mask)
 
-    #make the heatmap plot
-    plt.figure(figsize=(16,9))
-    sns.heatmap(corr, mask=mask, cmap=cmap, vmax=1, center=0, square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    # dibujar con Matplotlib puro (imshow)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    cax = ax.imshow(corr_masked, cmap='coolwarm', vmin=-1, vmax=1)
+    
+    # Añadir barra de color
+    fig.colorbar(cax, shrink=0.8)
+    
+    # Ajustar etiquetas de los ejes
+    cols = corr.columns
+    ax.set_xticks(np.arange(len(cols)))
+    ax.set_yticks(np.arange(len(cols)))
+    ax.set_xticklabels(cols, rotation=90, fontsize=8)
+    ax.set_yticklabels(cols, fontsize=8)
+    
+    plt.title("Matriz de Correlación", fontsize=12)
     plt.tight_layout()
 
-    plt.savefig("tmp/matriz_correlacion.png", dpi=250)
-    mlflow.log_artifact("graficos/matriz_correlacion.png")
+    # guardar y registrar en MLflow
+    path_local = f"/tmp/{nombre_grafico}.png"
+    plt.savefig(path_local, dpi=250)
+    plt.close(fig)
 
-    plt.show()
+    mlflow.log_artifact(path_local, artifact_path="graficos")

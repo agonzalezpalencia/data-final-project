@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedStratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from src.utils import plot_keras_history, plot_matriz_confusion, plot_grid_search_results, plot_matriz_correlacion
+from src.utils import plot_keras_history, plot_matriz_confusion, plot_grid_search_results
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.compose import make_column_transformer
@@ -19,9 +19,6 @@ def entrenar_modelo_tf(ti):
     mlflow.enable_system_metrics_logging()
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
     df = pd.read_csv(csv_limpio)
-
-     # Dibuja una matriz de correlación a partir de un df
-    plot_matriz_correlacion(df)
 
     X = df[['temperature', 'heartrate','resprate', 'o2sat', 'sbp', 'dbp','pain']].astype({
         'temperature': 'float32', 'heartrate': 'float32', 'resprate': 'float32',
@@ -78,9 +75,6 @@ def entrenar_modelo_rf(ti):
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
     df = pd.read_csv(csv_limpio)
 
-     # Dibuja una matriz de correlación a partir de un df
-    plot_matriz_correlacion(df)
-
     X = df[['temperature', 'heartrate','resprate', 'o2sat', 'sbp', 'dbp','pain']].astype({
         'temperature': 'float32', 'heartrate': 'float32', 'resprate': 'float32',
         'o2sat': 'float32', 'sbp': 'float32', 'dbp': 'float32', 'pain': 'float32'
@@ -116,9 +110,6 @@ def entrenar_modelo_lr(ti):
     mlflow.enable_system_metrics_logging()
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset_edstays")
     df = pd.read_csv(csv_limpio)
-
-    # Dibuja una matriz de correlación a partir de un df
-    plot_matriz_correlacion(df)
     
     # Declaramos las columnas númericas 
     numerical_columns = ["temperature", "heartrate", "resprate", "o2sat", "sbp", "dbp", "pain", "pain_not_assessable", "shock_index", "pulse_pressure", "arrival_hour"]
