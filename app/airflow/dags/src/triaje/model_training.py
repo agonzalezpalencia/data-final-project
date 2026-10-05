@@ -64,7 +64,7 @@ def entrenar_modelo_tf(ti, epochs=25, neur=32, learning_rate=0.01, run_name="Ker
         # El primer parámetro hace referencia a los resultados obtenidos en el test, 
         # el segundo a la predicciones, 
         # el tercero es el nombre del modelo para dibujar en la gráfica
-        plot_matriz_confusion(y_test, y_pred, "Keras_Red_Neuronal")
+        plot_matriz_confusion(y_test, y_pred, "Keras_Red_Neuronal", display_labels=['No urgente','Urgente'])
         id_tf = run_tf.info.run_id
         print("Accuracy Tensorflow:", accuracy_tf)
 
@@ -101,7 +101,7 @@ def entrenar_modelo_rf(ti, n_estimators=100, random_state=42, run_name="RandomFo
         # El primer parámetro hace referencia a los resultados obtenidos en el test, 
         # el segundo a la predicciones, 
         # el tercero es el nombre del modelo para dibujar en la gráfica
-        plot_matriz_confusion(y_test, y_pred, "RandomForest")
+        plot_matriz_confusion(y_test, y_pred, "RandomForest",display_labels=['No urgente','Urgente'])
         id_rf = run_rf.info.run_id
         print("Accuracy RandomForest:", accuracy_rf)
 
@@ -176,7 +176,7 @@ def entrenar_modelo_lr(ti, c_values=(0.01, 0.03, 0.1, 0.3, 1, 3, 10), run_name="
         plot_grid_search_results(res_df, grid.best_index_)
         
         y_pred = grid.predict(X_test)
-        plot_matriz_confusion(y_test, y_pred, "LogisticRegression")
+        plot_matriz_confusion(y_test, y_pred, "LogisticRegression",display_labels=['No urgente','Urgente'])
         
         accuracy_lr = grid.score(X_test, y_test)
         mlflow.log_metric("accuracy_test", accuracy_lr)
