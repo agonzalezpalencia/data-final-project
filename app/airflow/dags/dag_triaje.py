@@ -18,7 +18,7 @@ with DAG(
     'Triaje_DAG',
     default_args=default_args,
     description='DAG que procesa el Dataset de Triaje y entrena modelos en paralelo (RF y Keras)',
-    schedule_interval='@daily',
+    schedule_interval='@monthly',
     start_date=datetime(2026, 10, 4),
     catchup=False,
     tags=['urgencias', 'mlflow'],
