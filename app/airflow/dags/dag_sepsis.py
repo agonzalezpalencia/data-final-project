@@ -27,7 +27,7 @@ with DAG(
     'sepsis_dag',
     default_args=default_args,
     description='DAG que procesa los pacientes de Sepsis al completo y entrena un modelo de Scikit Learn usando el algoritmo RandomForest',
-    schedule_interval=None,
+    schedule_interval='@monthly',
     start_date=datetime(2026, 10, 1),
     catchup=False,
     max_active_runs=1,
