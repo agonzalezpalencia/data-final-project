@@ -14,7 +14,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-def entrenar_modelo_tf(ti):
+def entrenar_modelo_tf(ti, epochs=25, neur=32, learning_rate=0.01, run_name="Keras_Binary"):
     # Métricas del sistema
     mlflow.enable_system_metrics_logging()
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
@@ -36,12 +36,12 @@ def entrenar_modelo_tf(ti):
     model = tf.keras.Sequential([
         tf.keras.Input(shape=(7,)),
         normalizator,
-        tf.keras.layers.Dense(32, activation="relu"),
+        tf.keras.layers.Dense(neur, activation="relu"),
         tf.keras.layers.Dense(1, activation="sigmoid")
     ])
 
     early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_binary_accuracy', patience=3, restore_best_weights=True)
-    optimizer = tf.keras.optimizers.AdamW(learning_rate=0.01)
+    optimizer = tf.keras.optimizers.AdamW(learning_rate=learning_rate)
     loss = tf.keras.losses.BinaryCrossentropy()
     metric = tf.keras.metrics.BinaryAccuracy()
 
@@ -50,9 +50,9 @@ def entrenar_modelo_tf(ti):
     mlflow.set_tracking_uri("http://mlflow:5000")
     mlflow.set_experiment('Experimento Entreno')
 
-    with mlflow.start_run(run_name="Keras_Binary") as run_tf:
+    with mlflow.start_run(run_name=run_name) as run_tf:
         mlflow.tensorflow.autolog()
-        history = model.fit(X_train, y_train, epochs=25, batch_size=8, callbacks=[early_stopping], validation_data=(X_test, y_test))
+        history = model.fit(X_train, y_train, epochs=epochs, batch_size=8, callbacks=[early_stopping], validation_data=(X_test, y_test))
         # Función para dibujar las gráficas y guardar el artefacto
         plot_keras_history(history)
         accuracy_tf = history.history['val_binary_accuracy'][-1]
@@ -70,8 +70,10 @@ def entrenar_modelo_tf(ti):
 
     model_uri = f"runs:/{id_tf}/model"
     mlflow.register_model(model_uri=model_uri, name="Clasificador_TF_Triaje")
+    
+    return float(accuracy_tf) # devolver accuracy como float para que Airflow lo maneje en XCom
 
-def entrenar_modelo_rf(ti):
+def entrenar_modelo_rf(ti, n_estimators=100, random_state=42, run_name="RandomForest_Base"):
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset")
     df = pd.read_csv(csv_limpio)
 
@@ -84,12 +86,12 @@ def entrenar_modelo_rf(ti):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 
-    rf = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
 
     mlflow.set_tracking_uri("http://mlflow:5000")
     mlflow.set_experiment('Experimento Entreno')
 
-    with mlflow.start_run(run_name="RandomForest_Base") as run_rf:
+    with mlflow.start_run(run_name=run_name) as run_rf:
         mlflow.sklearn.autolog()
         rf.fit(X_train, y_train)
         accuracy_rf = rf.score(X_test, y_test)
@@ -106,7 +108,9 @@ def entrenar_modelo_rf(ti):
     model_uri = f"runs:/{id_rf}/model"
     mlflow.register_model(model_uri=model_uri, name="Clasificador_RF_Triaje")
     
-def entrenar_modelo_lr(ti):
+    return float(accuracy_rf) # devolver accuracy como float para que Airflow lo maneje en XCom
+    
+def entrenar_modelo_lr(ti, c_values=(0.01, 0.03, 0.1, 0.3, 1, 3, 10), run_name="LogisticRegression_GridSearch"):
     mlflow.enable_system_metrics_logging()
     csv_limpio = ti.xcom_pull(task_ids="procesar_dataset_edstays")
     df = pd.read_csv(csv_limpio)
@@ -144,7 +148,7 @@ def entrenar_modelo_lr(ti):
     grid = GridSearchCV(
         model,
         {
-            "logisticregression__C": [0.01, 0.03, 0.1, 0.3, 1, 3, 10],
+            "logisticregression__C": list(c_values),
             "logisticregression__class_weight": ["balanced", None],
             "columntransformer__tfidfvectorizer__min_df": [1, 2, 3],
             # Especificamos las flags que vamos a usar a la hora de usar GridSearchCV
@@ -161,7 +165,7 @@ def entrenar_modelo_lr(ti):
     mlflow.set_experiment("Experimento Entreno")
     
     
-    with mlflow.start_run(run_name="LogisticRegression_GridSearch") as run_lr:
+    with mlflow.start_run(run_name=run_name) as run_lr:
         # mlflow.sklearn.autolog()
         # Entrenamiento del modelo
         grid.fit(X_train,y_train)
@@ -186,4 +190,6 @@ def entrenar_modelo_lr(ti):
         
     model_uri = f"runs:/{id_lr}/model"
     mlflow.register_model(model_uri=model_uri, name="Clasificador_LR_Triaje")
+    
+    return float(accuracy_lr) # devolver accuracy como float para que Airflow lo maneje en XCom
         
