@@ -13,6 +13,10 @@ from src.triaje.utils import enrutador_procesado, enrutador_modelos
 from airflow.operators.python import BranchPythonOperator
 from airflow.operators.empty import EmptyOperator
 
+import src.triaje.data_processing
+import src.triaje.model_training
+import src.triaje.utils
+
 default_args = {
     'owner': 'MLOps',
     'depends_on_past': False,
@@ -109,7 +113,8 @@ with DAG(
     evaluar_modelos_task = BranchPythonOperator(
         task_id='evaluar_modelos',
         python_callable=evaluar_modelos,
-        queue='low_tier_tasks'
+        queue='low_tier_tasks',
+        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
     )
     
     reentrenar_modelo_tf_task = PythonOperator(
