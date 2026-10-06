@@ -7,3 +7,4 @@ app/jupyter/datos/
 .vscode/
 logs/
 plugins/
+mlflow.db
